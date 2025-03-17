@@ -29,7 +29,7 @@ class LedChaser(LiteXModule):
 
         # # #
 
-
+        reset = ResetSignal()
         chaser = Signal(self.n)
         mode   = Signal(reset=_CHASER_MODE)
         timer  = WaitTimer(period*sys_clk_freq/(2*self.n))
@@ -45,7 +45,11 @@ class LedChaser(LiteXModule):
                 leds.eq(chaser)
             )
         ]
-        self.comb += pads.eq(leds ^ (self.polarity*(2**self.n-1)))
+        self.comb += If(~reset,
+            pads.eq(leds ^ (self.polarity*(2**self.n-1)))
+        ).Else(
+            pads.eq(0x0000 ^ (self.polarity*(2**self.n-1)))
+        )
 
     def add_pwm(self, default_width=512, default_period=1024, with_csr=True):
         from litex.soc.cores.pwm import PWM

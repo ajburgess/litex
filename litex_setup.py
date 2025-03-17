@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import json
 import os
 import sys
 import time
@@ -77,7 +78,7 @@ git_repos = {
     # ------------------
     "pythondata-software-picolibc":    GitRepo(url="https://github.com/litex-hub/", clone="recursive"),
     "pythondata-software-compiler_rt": GitRepo(url="https://github.com/litex-hub/"),
-    "litex":                           GitRepo(url="https://github.com/enjoy-digital/", tag=True),
+    "litex":                           GitRepo(url="https://github.com/ajburgess/", tag=True),
 
     # LiteX Cores Ecosystem.
     # ----------------------
@@ -98,7 +99,7 @@ git_repos = {
 
     # LiteX Boards.
     # -------------
-    "litex-boards": GitRepo(url="https://github.com/litex-hub/", clone="regular", tag=True),
+    "litex-boards": GitRepo(url="https://github.com/ajburgess/", clone="regular", tag=True),
 
     # LiteX pythondata.
     # -----------------
@@ -173,7 +174,7 @@ def litex_setup_location_check():
         current_path = os.path.join(current_path, "../")
 
 def litex_setup_auto_update():
-    litex_setup_url = "https://raw.githubusercontent.com/enjoy-digital/litex/master/litex_setup.py"
+    litex_setup_url = "https://raw.githubusercontent.com/ajburgess/litex/master/litex_setup.py"
     current_sha1 = hashlib.sha1(open(os.path.realpath(__file__)).read().encode("utf-8")).hexdigest()
     print_status("LiteX Setup auto-update...")
     try:
@@ -278,6 +279,27 @@ def litex_setup_update_repos(config="standard", tag=None):
 
 # Git repositories install -------------------------------------------------------------------------
 
+def add_directory_to_python_analysis_extra_paths(directory):
+    PYTHON_ANALYSIS_EXTRA_PATHS = "python.analysis.extraPaths"
+    root_dir = os.path.join(directory, "..", "..")
+    vscode_dir = os.path.join(root_dir, ".vscode")
+    os.makedirs(vscode_dir, exist_ok=True)
+    settings_path = os.path.join(vscode_dir, "settings.json")
+    if os.path.exists(settings_path):
+        with open(settings_path, "r") as f:
+            settings_obj = json.load(f)
+    else:
+        settings_obj = {}
+    if PYTHON_ANALYSIS_EXTRA_PATHS not in settings_obj:
+        settings_obj[PYTHON_ANALYSIS_EXTRA_PATHS] = []
+    existing_extra_paths: list[str] = settings_obj[PYTHON_ANALYSIS_EXTRA_PATHS]
+    relative_directory = os.path.relpath(directory, root_dir)
+    if relative_directory not in existing_extra_paths:
+        print(f"Adding {relative_directory} to Python analysis extra files list in workspace settings")
+        existing_extra_paths.append(relative_directory)
+    with open(settings_path, "w") as f:
+        json.dump(settings_obj, f,  indent=4)
+
 def litex_setup_install_repos(config="standard", user_mode=False):
     print_status("Installing Git repositories...", underline=True)
     for name in install_configs[config]:
@@ -292,6 +314,7 @@ def litex_setup_install_repos(config="standard", user_mode=False):
                 editable = "--editable" if repo.editable else "",
                 options  = "--user"     if user_mode else "",
                 ), shell=True)
+            add_directory_to_python_analysis_extra_paths(os.path.join(current_path, name))
     if user_mode:
         if ".local/bin" not in os.environ.get("PATH", ""):
             print_status("Make sure that ~/.local/bin is in your PATH")

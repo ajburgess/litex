@@ -406,6 +406,7 @@ class CSRStorage(_CompoundCSR):
         if nwords > 1 and self.atomic_write:
             backstore = Signal(self.size - busword, name=self.name + "_backstore")
         for i in reversed(range(nwords)) if ordering == "big" else range(nwords):
+            
             nbits = min(self.size - i*busword, busword)
             sc    = CSR(nbits, self.name + str(i) if nwords else self.name)
             self.simple_csrs.append(sc)

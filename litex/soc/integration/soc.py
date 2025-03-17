@@ -2496,7 +2496,7 @@ class LiteXSoC(SoC):
 
         # ColorsBars Pattern.
         self.check_if_exists(name)
-        colorbars = ClockDomainsRenamer(clock_domain)(ColorBarsPattern())
+        colorbars = ClockDomainsRenamer(clock_domain)(ColorBarsPattern(timings))
         self.add_module(name=name, module=colorbars)
 
         # Connect Video Timing Generator to ColorsBars Pattern.
@@ -2504,6 +2504,52 @@ class LiteXSoC(SoC):
             vtg.source.connect(colorbars.vtg_sink),
             colorbars.source.connect(phy if isinstance(phy, stream.Endpoint) else phy.sink)
         ]
+
+    # Add Colour Bars test pattern generator ---------------------------------------------------------------------------
+    def add_video_bars(self, name="video_bars", phy=None, arcade_pads=None, timings="800x600@60Hz", clock_domain="sys"):
+        # Imports.
+        from litex.soc.cores.video import VideoTimingGenerator, ColorBarsPattern
+
+        # Video Timing Generator.
+        self.check_if_exists(f"{name}_vtg")
+        vtg = VideoTimingGenerator(default_video_timings=timings if isinstance(timings, str) else timings[1])
+        vtg = ClockDomainsRenamer(clock_domain)(vtg)
+        self.add_module(name=f"{name}_vtg", module=vtg)
+
+        # Video colour bars.
+        timings = timings if isinstance(timings, str) else timings[0]
+        vcb = ColorBarsPattern(timings, arcade_pads)
+        vcb = ClockDomainsRenamer(clock_domain)(vcb)
+        self.add_module(name=name, module=vcb)
+
+        # Connect Video Timing Generator to colour bars.
+        self.comb += vtg.source.connect(vcb.vtg_sink)
+
+        # Connect colour bars to Video PHY.
+        self.comb += vcb.source.connect(phy if isinstance(phy, stream.Endpoint) else phy.sink)
+
+    # Add Colour Bars (V2) test pattern generator ---------------------------------------------------------------------------
+    def add_video_bars_2(self, name="video_bars_2", phy=None, timings="800x600@60Hz", clock_domain="sys"):
+        # Imports.
+        from litex.soc.cores.video import VideoTimingGenerator, ColorBarsPattern2
+
+        # Video Timing Generator.
+        self.check_if_exists(f"{name}_vtg")
+        vtg = VideoTimingGenerator(default_video_timings=timings if isinstance(timings, str) else timings[1])
+        vtg = ClockDomainsRenamer(clock_domain)(vtg)
+        self.add_module(name=f"{name}_vtg", module=vtg)
+
+        # Video colour bars.
+        timings = timings if isinstance(timings, str) else timings[0]
+        vcb = ColorBarsPattern2()
+        vcb = ClockDomainsRenamer(clock_domain)(vcb)
+        self.add_module(name=name, module=vcb)
+
+        # Connect Video Timing Generator to colour bars.
+        self.comb += vtg.source.connect(vcb.vtg_sink)
+
+        # Connect colour bars to Video PHY.
+        self.comb += vcb.source.connect(phy if isinstance(phy, stream.Endpoint) else phy.sink)
 
     # Add Video Terminal ---------------------------------------------------------------------------
     def add_video_terminal(self, name="video_terminal", phy=None, timings="800x600@60Hz", clock_domain="sys"):

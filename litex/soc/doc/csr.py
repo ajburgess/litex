@@ -99,7 +99,7 @@ class DocumentedCSRRegion:
                 short_name          = self.name.upper(),
                 reset               = 0,
                 size                = self.raw_csrs.width,
-                description         = "{} x {}-bit memory".format(self.raw_csrs.width, self.raw_csrs.depth)
+                description         = f"{self.raw_csrs.depth} x {self.raw_csrs.width}-bit memory"
             ))
             print("{}@{:x}: Found memory that's {} x {} (but memories aren't documented yet)".format(
                 self.name, self.origin, self.raw_csrs.width, self.raw_csrs.depth))

@@ -20,32 +20,35 @@ static char *readstr(void)
 	static char s[64];
 	static int ptr = 0;
 
-	if(readchar_nonblock()) {
+	if (readchar_nonblock())
+	{
 		c[0] = getchar();
 		c[1] = 0;
-		switch(c[0]) {
-			case 0x7f:
-			case 0x08:
-				if(ptr > 0) {
-					ptr--;
-					fputs("\x08 \x08", stdout);
-				}
+		switch (c[0])
+		{
+		case 0x7f:
+		case 0x08:
+			if (ptr > 0)
+			{
+				ptr--;
+				fputs("\x08 \x08", stdout);
+			}
+			break;
+		case 0x07:
+			break;
+		case '\r':
+		case '\n':
+			s[ptr] = 0x00;
+			fputs("\n", stdout);
+			ptr = 0;
+			return s;
+		default:
+			if (ptr >= (sizeof(s) - 1))
 				break;
-			case 0x07:
-				break;
-			case '\r':
-			case '\n':
-				s[ptr] = 0x00;
-				fputs("\n", stdout);
-				ptr = 0;
-				return s;
-			default:
-				if(ptr >= (sizeof(s) - 1))
-					break;
-				fputs(c, stdout);
-				s[ptr] = c[0];
-				ptr++;
-				break;
+			fputs(c, stdout);
+			s[ptr] = c[0];
+			ptr++;
+			break;
 		}
 	}
 
@@ -57,14 +60,15 @@ static char *get_token(char **str)
 	char *c, *d;
 
 	c = (char *)strchr(*str, ' ');
-	if(c == NULL) {
+	if (c == NULL)
+	{
 		d = *str;
-		*str = *str+strlen(*str);
+		*str = *str + strlen(*str);
 		return d;
 	}
 	*c = 0;
 	d = *str;
-	*str = c+1;
+	*str = c + 1;
 	return d;
 }
 
@@ -79,12 +83,17 @@ static void prompt(void)
 
 static void help(void)
 {
-	puts("\nLiteX minimal demo app built "__DATE__" "__TIME__"\n");
+	puts("\nLiteX minimal demo app built "__DATE__
+		 " "__TIME__
+		 "\n");
 	puts("Available commands:");
 	puts("help               - Show this command");
 	puts("reboot             - Reboot CPU");
 #ifdef CSR_LEDS_BASE
 	puts("led                - Led demo");
+#endif
+#ifdef CSR_SOUND_GENERATOR_BASE
+	puts("sound              - Sound demo");
 #endif
 	puts("donut              - Spinning Donut demo");
 	puts("helloc             - Hello C");
@@ -99,8 +108,58 @@ static void help(void)
 
 static void reboot_cmd(void)
 {
-	ctrl_reset_write(1);
+	// AJB - test only!
+	goto *(void *)0x00000000;
+	// ctrl_reset_write(1);
 }
+
+#ifdef CSR_SOUND_GENERATOR_BASE
+
+static uint32_t get_midi_note_period(int note_number)
+{
+	uint32_t *addr = (uint32_t *)(CSR_SOUND_GENERATOR_MIDI_LOOKUP_BASE + (note_number << 2));
+	uint32_t period = *addr;
+	return period;
+}
+
+static void sound_cmd(void)
+{
+	int i;
+	printf("Sound demo...\n");
+
+	printf("Pure tone...\n");
+	for (i = 0; i < 4; i++)
+	{
+		int period = get_midi_note_period(57);
+		int amplitude = (i + 1) * 4 - 1;
+		sound_generator_ch1_period_write(period);
+		sound_generator_ch1_amplitude_write(amplitude);
+		busy_wait(200);
+		sound_generator_ch1_amplitude_write(0);
+		busy_wait(200);
+	}
+
+	printf("Noise (low)...\n");
+	for (i = 0; i < 4; i++)
+	{
+		sound_generator_ch4_period_write(512);
+		sound_generator_ch4_amplitude_write(15);
+		busy_wait(50);
+		sound_generator_ch4_amplitude_write(0);
+		busy_wait(350);
+	}
+
+	printf("Noise (high)...\n");
+	for (i = 0; i < 4; i++)
+	{
+		sound_generator_ch4_period_write(128);
+		sound_generator_ch4_amplitude_write(15);
+		busy_wait(50);
+		sound_generator_ch4_amplitude_write(0);
+		busy_wait(350);
+	}
+}
+#endif
 
 #ifdef CSR_LEDS_BASE
 static void led_cmd(void)
@@ -109,23 +168,27 @@ static void led_cmd(void)
 	printf("Led demo...\n");
 
 	printf("Counter mode...\n");
-	for(i=0; i<32; i++) {
+	for (i = 0; i < 32; i++)
+	{
 		leds_out_write(i);
 		busy_wait(100);
 	}
 
 	printf("Shift mode...\n");
-	for(i=0; i<4; i++) {
-		leds_out_write(1<<i);
+	for (i = 0; i < 4; i++)
+	{
+		leds_out_write(1 << i);
 		busy_wait(200);
 	}
-	for(i=0; i<4; i++) {
-		leds_out_write(1<<(3-i));
+	for (i = 0; i < 4; i++)
+	{
+		leds_out_write(1 << (3 - i));
 		busy_wait(200);
 	}
 
 	printf("Dance mode...\n");
-	for(i=0; i<4; i++) {
+	for (i = 0; i < 4; i++)
+	{
 		leds_out_write(0x55);
 		busy_wait(200);
 		leds_out_write(0xaa);
@@ -170,22 +233,27 @@ static void console_service(void)
 	char *token;
 
 	str = readstr();
-	if(str == NULL) return;
+	if (str == NULL)
+		return;
 	token = get_token(&str);
-	if(strcmp(token, "help") == 0)
+	if (strcmp(token, "help") == 0)
 		help();
-	else if(strcmp(token, "reboot") == 0)
+	else if (strcmp(token, "reboot") == 0)
 		reboot_cmd();
 #ifdef CSR_LEDS_BASE
-	else if(strcmp(token, "led") == 0)
+	else if (strcmp(token, "led") == 0)
 		led_cmd();
 #endif
-	else if(strcmp(token, "donut") == 0)
+#ifdef CSR_SOUND_GENERATOR_BASE
+	else if (strcmp(token, "sound") == 0)
+		sound_cmd();
+#endif
+	else if (strcmp(token, "donut") == 0)
 		donut_cmd();
-	else if(strcmp(token, "helloc") == 0)
+	else if (strcmp(token, "helloc") == 0)
 		helloc_cmd();
 #ifdef WITH_CXX
-	else if(strcmp(token, "hellocpp") == 0)
+	else if (strcmp(token, "hellocpp") == 0)
 		hellocpp_cmd();
 #endif
 	prompt();
@@ -202,7 +270,8 @@ int main(void)
 	help();
 	prompt();
 
-	while(1) {
+	while (1)
+	{
 		console_service();
 	}
 

@@ -225,6 +225,9 @@ class YosysNextPNRToolchain(GenericToolchain):
         else:
             shell = ["bash"]
 
+        # TEST ONLY!
+        shell = ["bash"]
+
         if which("yosys") is None or which(self._nextpnr.name) is None:
             msg = "Unable to find Yosys/Nextpnr toolchain, please:\n"
             msg += "- Add Yosys/Nextpnr toolchain to your $PATH."

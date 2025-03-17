@@ -20,15 +20,18 @@
  */
 static void help_handler(int nb_params, char **params)
 {
-	struct command_struct * const *cmd;
+	struct command_struct *const *cmd;
 	int i, not_empty;
 
 	puts("\nLiteX BIOS, available commands:\n");
 
-	for (i = 0; i < NB_OF_GROUPS; i++) {
+	for (i = 0; i < NB_OF_GROUPS; i++)
+	{
 		not_empty = 0;
-		for (cmd = __bios_cmd_start; cmd != __bios_cmd_end; cmd++) {
-			if ((*cmd)->group == i) {
+		for (cmd = __bios_cmd_start; cmd != __bios_cmd_end; cmd++)
+		{
+			if ((*cmd)->group == i)
+			{
 				printf("%-24s - %s\n", (*cmd)->name, (*cmd)->help ? (*cmd)->help : "-");
 				not_empty = 1;
 			}
@@ -53,8 +56,8 @@ static void ident_handler(int nb_params, char **params)
 
 #ifdef CSR_IDENTIFIER_MEM_BASE
 	int i;
-	for(i=0;i<IDENT_SIZE;i++)
-		buffer[i] = MMPTR(CSR_IDENTIFIER_MEM_BASE + CONFIG_CSR_ALIGNMENT/8*i);
+	for (i = 0; i < IDENT_SIZE; i++)
+		buffer[i] = MMPTR(CSR_IDENTIFIER_MEM_BASE + CONFIG_CSR_ALIGNMENT / 8 * i);
 #else
 	buffer[0] = 0;
 #endif
@@ -78,9 +81,8 @@ static void uptime_handler(int nb_params, char **params)
 	timer0_uptime_latch_write(1);
 	uptime = timer0_uptime_cycles_read();
 	printf("Uptime: %ld sys_clk cycles / %ld seconds",
-		uptime,
-		uptime/CONFIG_CLOCK_FREQUENCY
-	);
+		   uptime,
+		   uptime / CONFIG_CLOCK_FREQUENCY);
 }
 
 define_command(uptime, uptime_handler, "Uptime of the system since power-up", SYSTEM_CMDS);
@@ -98,19 +100,22 @@ static void crc_handler(int nb_params, char **params)
 	uintptr_t addr;
 	size_t length;
 
-	if (nb_params < 2) {
+	if (nb_params < 2)
+	{
 		printf("crc <address> <length>");
 		return;
 	}
 
 	addr = strtoul(params[0], &c, 0);
-	if (*c != 0) {
+	if (*c != 0)
+	{
 		printf("Incorrect address");
 		return;
 	}
 
 	length = strtoul(params[1], &c, 0);
-	if (*c != 0) {
+	if (*c != 0)
+	{
 		printf("Incorrect length");
 		return;
 	}
@@ -158,6 +163,22 @@ define_command(buttons, buttons_handler, "Get Buttons value", SYSTEM_CMDS);
 #endif
 
 /**
+ * Command "arcade_buttons"
+ *
+ * Set Buttons value
+ *
+ */
+#ifdef CSR_ARCADE_BASE
+static void arcade_buttons_handler(int nb_params, char **params)
+{
+	unsigned int value;
+	value = arcade_in_read();
+	printf("Arcade buttons value: 0x%x", value);
+}
+define_command(arcade_buttons, arcade_buttons_handler, "Get arcade buttons value", SYSTEM_CMDS);
+#endif
+
+/**
  * Command "leds"
  *
  * Set Leds value
@@ -169,13 +190,15 @@ static void leds_handler(int nb_params, char **params)
 	char *c;
 	unsigned int value;
 
-	if (nb_params < 1) {
+	if (nb_params < 1)
+	{
 		printf("leds <value>");
 		return;
 	}
 
 	value = strtoul(params[0], &c, 0);
-	if (*c != 0) {
+	if (*c != 0)
+	{
 		printf("Incorrect value");
 		return;
 	}
@@ -196,7 +219,7 @@ define_command(leds, leds_handler, "Set Leds value", SYSTEM_CMDS);
 #ifdef CSR_SIM_TRACE_BASE
 static void cmd_sim_trace_handler(int nb_params, char **params)
 {
-  sim_trace(!sim_trace_enable_read());
+	sim_trace(!sim_trace_enable_read());
 }
 define_command(trace, cmd_sim_trace_handler, "Toggle simulation tracing", SYSTEM_CMDS);
 #endif
@@ -210,7 +233,7 @@ define_command(trace, cmd_sim_trace_handler, "Toggle simulation tracing", SYSTEM
 #ifdef CSR_SIM_FINISH_BASE
 static void cmd_sim_finish_handler(int nb_params, char **params)
 {
-  sim_finish();
+	sim_finish();
 }
 define_command(finish, cmd_sim_finish_handler, "Finish simulation", SYSTEM_CMDS);
 #endif
@@ -224,8 +247,8 @@ define_command(finish, cmd_sim_finish_handler, "Finish simulation", SYSTEM_CMDS)
 #ifdef CSR_SIM_MARKER_BASE
 static void cmd_sim_mark_handler(int nb_params, char **params)
 {
-  // cannot use param[1] as it is not a const string
-  sim_mark(NULL);
+	// cannot use param[1] as it is not a const string
+	sim_mark(NULL);
 }
 define_command(mark, cmd_sim_mark_handler, "Set a debug simulation marker", SYSTEM_CMDS);
 #endif
