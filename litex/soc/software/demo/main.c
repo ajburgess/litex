@@ -95,6 +95,9 @@ static void help(void)
 #ifdef CSR_SOUND_GENERATOR_BASE
 	puts("sound              - Sound demo");
 #endif
+#ifdef CSR_TIMER0_BASE
+	puts("timer              - Timer demo");
+#endif
 	puts("donut              - Spinning Donut demo");
 	puts("helloc             - Hello C");
 #ifdef WITH_CXX
@@ -108,10 +111,58 @@ static void help(void)
 
 static void reboot_cmd(void)
 {
-	// AJB - test only!
-	goto *(void *)0x00000000;
-	// ctrl_reset_write(1);
+	ctrl_reset_write(1);
 }
+
+#ifdef CSR_TIMER0_BASE
+
+static void timer_cmd_interrupt_handler(void)
+{
+	printf("Inside my interrupt handler!\n");
+	timer1_ev_pending_write(1);
+}
+
+static void timer_cmd(void)
+{
+	printf("Timer demo...\n");
+
+	// Disable the timer while we make changes.
+	timer1_en_write(0);
+
+	// Register our interrupt handler.
+	irq_attach(TIMER1_INTERRUPT, timer_cmd_interrupt_handler);
+
+	// Enable the timer in the CPU interrupt mask.
+	unsigned int mask = irq_getmask();
+	mask |= 1 << TIMER1_INTERRUPT;
+	irq_setmask(mask);
+
+	// Enable the timer's event-handling logic.
+	timer1_ev_enable_write(1);
+
+	// Make the timer generate a tick every 100ms (frequency = 10 Hz)
+	timer1_load_write(0);
+	timer1_reload_write(CONFIG_CLOCK_FREQUENCY / 10);
+
+	// Re-enable the timer now we have finished making changes.
+	timer1_en_write(1);
+
+	int i, value;
+	for (i = 0; i < 40; i++)
+	{
+		timer1_update_value_write(1);
+		value = timer1_value_read();
+		printf("Value: %d\n", value);
+		busy_wait(100);
+	}
+
+	// Remove the timer from the CPU interrupt mask.
+	mask = irq_getmask();
+	mask &= ~(1 << TIMER1_INTERRUPT);
+	irq_setmask(mask);
+}
+
+#endif
 
 #ifdef CSR_SOUND_GENERATOR_BASE
 
@@ -247,6 +298,13 @@ static void console_service(void)
 #ifdef CSR_SOUND_GENERATOR_BASE
 	else if (strcmp(token, "sound") == 0)
 		sound_cmd();
+#endif
+#ifdef CSR_TIMER0_BASE
+	else if (strcmp(token, "timer") == 0)
+	{
+		printf("BLAH");
+		timer_cmd();
+	}
 #endif
 	else if (strcmp(token, "donut") == 0)
 		donut_cmd();

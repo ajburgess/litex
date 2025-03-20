@@ -78,7 +78,6 @@ define_command(boot, boot_handler, "Boot from Memory", BOOT_CMDS);
 #ifdef CSR_CTRL_RESET_ADDR
 static void reboot_handler(int nb_params, char **params)
 {
-	boot(0, 0, 0, 0); // AJB
 	ctrl_reset_write(1);
 }
 
