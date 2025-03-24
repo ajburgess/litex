@@ -316,7 +316,7 @@ class VideoTimingGenerator(LiteXModule):
 
 class ColorBarsPattern(LiteXModule):
     """Color Bars Pattern"""
-    def __init__(self, resolution, arcade_pads):
+    def __init__(self, resolution, reverse):
         self.enable   = Signal(reset=1)
         self.vtg_sink = vtg_sink   = stream.Endpoint(video_timing_layout)
         self.source   = source = stream.Endpoint(video_data_layout)
@@ -423,10 +423,11 @@ class ColorBarsPattern(LiteXModule):
 
         cases = {}
         for i in range(len(color_bar)):
+            i2 = len(color_bar) - 1 - i if reverse else i
             cases[i] = [
-                source.r.eq(color_bar[i][0]),
-                source.g.eq(color_bar[i][1]),
-                source.b.eq(color_bar[i][2])
+                source.r.eq(color_bar[i2][0]),
+                source.g.eq(color_bar[i2][1]),
+                source.b.eq(color_bar[i2][2])
             ]
         self.comb += Case(bar, cases)
 
@@ -450,61 +451,6 @@ class ColorBarsPattern(LiteXModule):
             source.g.eq(0x00),
             source.b.eq(0x00)
         )
-
-class ColorBarsPattern2(LiteXModule):
-    """Color Bars Pattern"""
-    def __init__(self):
-        self.enable   = Signal(reset=1)
-        self.vtg_sink = vtg_sink   = stream.Endpoint(video_timing_layout)
-        self.source   = source = stream.Endpoint(video_data_layout)
-
-        # # #
-
-        enable = Signal()
-        self.specials += MultiReg(self.enable, enable)
-
-        # Control Path.
-        pix = Signal(hbits)
-        colour = Signal(6)
-
-        fsm = FSM(reset_state="IDLE")
-        fsm = ResetInserter()(fsm)
-        self.fsm = fsm
-        self.comb += fsm.reset.eq(~self.enable)
-        fsm.act("IDLE",
-            NextValue(pix, 0),
-            NextValue(colour, 0),
-            vtg_sink.ready.eq(1),
-            If(vtg_sink.valid & vtg_sink.first & (vtg_sink.hcount == 0) & (vtg_sink.vcount == 0),
-                vtg_sink.ready.eq(0),
-                NextState("RUN")
-            )
-        )
-        fsm.act("RUN",
-            vtg_sink.connect(source, keep={"valid", "ready", "last", "de", "hsync", "vsync"}),
-            If(source.valid & source.ready & source.de,
-                NextValue(pix, pix + 1),
-                If(pix == 29, # 64 Color Bars.
-                    NextValue(pix, 0),
-                    NextValue(colour, colour + 1),
-                ),
-            ).Else(
-                NextValue(pix, 0),
-                NextValue(colour, 0),
-            )
-        )
-
-        self.comb += [
-            If(pix == 0,
-                   source.r.eq(0),
-                   source.b.eq(0),
-                   source.g.eq(0),
-            ).Else(
-                source.r.eq(colour[0:2] << 6),
-                source.g.eq(colour[2:4] << 6),
-                source.b.eq(colour[4:6] << 6),
-            )
-        ]
 
 # Video Terminal -----------------------------------------------------------------------------------
 
