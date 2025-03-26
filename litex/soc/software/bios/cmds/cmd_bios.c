@@ -172,7 +172,7 @@ define_command(buttons, buttons_handler, "Get Buttons value", SYSTEM_CMDS);
 static void arcade_buttons_handler(int nb_params, char **params)
 {
 	unsigned int value;
-	value = arcade_in_read();
+	value = arcade_inputs_read();
 	printf("Arcade buttons value: 0x%x", value);
 }
 define_command(arcade_buttons, arcade_buttons_handler, "Get arcade buttons value", SYSTEM_CMDS);

@@ -9,6 +9,7 @@
 import os
 import math
 
+from litex.soc.interconnect.csr_eventmanager import EventManager, EventSourceProcess
 from migen import *
 from migen.genlib.cdc import MultiReg
 
@@ -311,6 +312,13 @@ class VideoTimingGenerator(LiteXModule):
                 )
             )
         )
+
+        # Raise an event / interrupt when active horizontal area finished.
+
+        self.ev = EventManager()
+        self.ev.end_of_active_vertical_area = EventSourceProcess(edge="falling")
+        self.ev.finalize()
+        self.comb += self.ev.end_of_active_vertical_area.trigger.eq(vactive)
 
 # Video Patterns -----------------------------------------------------------------------------------
 

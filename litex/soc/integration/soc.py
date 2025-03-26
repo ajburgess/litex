@@ -2506,7 +2506,7 @@ class LiteXSoC(SoC):
         ]
 
     # Add Colour Bars test pattern generator ---------------------------------------------------------------------------
-    def add_video_bars(self, name="video_bars", phy=None, arcade_pads=None, timings="800x600@60Hz", clock_domain="sys", reverse=False):
+    def add_video_bars(self, name="video_bars", phy=None, timings="800x600@60Hz", clock_domain="sys", reverse=False):
         # Imports.
         from litex.soc.cores.video import VideoTimingGenerator, ColorBarsPattern
 
