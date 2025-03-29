@@ -26,7 +26,7 @@ from litex.soc.integration.soc      import *
 from litex.soc.cores.bitbang import *
 from litex.soc.cores.gpio    import GPIOTristate
 from litex.soc.cores.cpu     import CPUS
-from litex.soc.cores.video   import VideoGenericPHY
+from litex.soc.cores.video   import VideoGenericPHY, VideoTimingGenerator
 
 from litedram           import modules as litedram_modules
 from litedram.modules   import parse_spd_hexdump
@@ -46,6 +46,8 @@ from liteeth.core               import LiteEthUDPIPCore
 from liteeth.frontend.etherbone import LiteEthEtherbone
 
 from litescope import LiteScopeAnalyzer
+
+from sprite_engine import SpriteEngine
 
 # IOs ----------------------------------------------------------------------------------------------
 
@@ -180,6 +182,7 @@ class SimSoC(SoCCore):
         with_video_framebuffer = False,
         with_video_terminal    = False,
         with_video_colorbars   = False,
+        with_video_sprite_engine = False,
         sim_debug              = False,
         trace_reset_on         = False,
         with_jtag              = False,
@@ -348,7 +351,24 @@ class SimSoC(SoCCore):
             self.submodules.videophy = VideoGenericPHY(platform.request("vga"))
             self.add_video_colorbars(phy=self.videophy, timings="640x480@60Hz")
 
-        # Simulation debugging ----------------------------------------------------------------------
+        # Sprite engine ----------------------------------------------------------------------------
+        if with_video_sprite_engine:
+            self.submodules.videophy = VideoGenericPHY(platform.request("vga"))
+            
+            vtg = VideoTimingGenerator(default_video_timings="640x480@60Hz")
+            vtg = ClockDomainsRenamer("hdmi")(vtg)
+            self.add_module(name="vtg", module=vtg)
+            vcb = SpriteEngine()
+            vcb = ClockDomainsRenamer("hdmi")(vcb)
+            self.add_module(name="sprite_engine", module=vcb)
+            self.comb += vtg.source.connect(vcb.vtg_sink)
+            self.comb += vcb.source.connect(self.videophy if isinstance(self.videophy, stream.Endpoint) else self.videophy.sink)
+            self.irq.add("vtg", use_loc_if_exists=True)
+
+
+            self.add_video_colorbars(phy=self.videophy, timings="640x480@60Hz")
+
+        # Simulation debugging ---------------------------------------------------------------------
         if sim_debug:
             platform.add_debug(self, reset=1 if trace_reset_on else 0)
         else:
@@ -464,6 +484,7 @@ def sim_args(parser):
     parser.add_argument("--with-video-framebuffer", action="store_true",   help="Enable Video Framebuffer.")
     parser.add_argument("--with-video-terminal",    action="store_true",   help="Enable Video Terminal.")
     parser.add_argument("--with-video-colorbars",   action="store_true",   help="Enable Video test pattern.")
+    parser.add_argument("--with-video-sprite-engine", action="store_true",   help="Enable Video sprite engine.")
     parser.add_argument("--video-vsync",            action="store_true",   help="Only render on frame vsync.")
 
     # Debug/Waveform.
@@ -547,7 +568,7 @@ def main():
         sim_config.add_module("jtagremote", "jtag", args={'port': 44853})
 
     # Video.
-    if args.with_video_framebuffer or args.with_video_terminal or args.with_video_colorbars:
+    if args.with_video_sprite_engine or args.with_video_framebuffer or args.with_video_terminal or args.with_video_colorbars:
         sim_config.add_module("video", "vga", args={"render_on_vsync": args.video_vsync})
 
     # SoC ------------------------------------------------------------------------------------------
@@ -568,6 +589,7 @@ def main():
         with_video_framebuffer = args.with_video_framebuffer,
         with_video_terminal    = args.with_video_terminal,
         with_video_colorbars   = args.with_video_colorbars,
+        with_video_sprite_engine = args.with_video_sprite_engine,
         sim_debug              = args.sim_debug,
         trace_reset_on         = int(float(args.trace_start)) > 0 or int(float(args.trace_end)) > 0,
         spi_flash_init         = None if args.spi_flash_init is None else get_mem_data(args.spi_flash_init, endianness="big"),

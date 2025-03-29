@@ -2496,7 +2496,7 @@ class LiteXSoC(SoC):
 
         # ColorsBars Pattern.
         self.check_if_exists(name)
-        colorbars = ClockDomainsRenamer(clock_domain)(ColorBarsPattern(timings))
+        colorbars = ClockDomainsRenamer(clock_domain)(ColorBarsPattern(timings, reverse=False))
         self.add_module(name=name, module=colorbars)
 
         # Connect Video Timing Generator to ColorsBars Pattern.
